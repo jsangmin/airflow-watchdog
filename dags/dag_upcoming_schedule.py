@@ -48,15 +48,34 @@ def check_upcoming_schedules(session=None):
 
         dag_info = {
             'dag_id': dag.dag_id,
+            'is_paused': dag.is_paused,
+            'is_active': dag.is_active,
+            'is_subdag': dag.is_subdag,
+            'fileloc': dag.fileloc,
+            'owners': dag.owners,
+            'description': dag.description,
+            'default_view': dag.default_view,
+            'tags': [tag.name for tag in dag.tags] if hasattr(dag, 'tags') else [],
             'schedule_interval': str(dag.schedule_interval),
+            'timetable_description': dag.timetable_summary if hasattr(dag, 'timetable_summary') else None,
             'next_run_logical_date': dag.next_dagrun.isoformat() if dag.next_dagrun else None,
             'next_run_create_after': dag.next_dagrun_create_after.isoformat() if dag.next_dagrun_create_after else None,
-            'timetable_description': dag.timetable_summary if hasattr(dag, 'timetable_summary') else None
+            'last_parsed_time': dag.last_parsed_time.isoformat() if dag.last_parsed_time else None,
+            'last_pickled': dag.last_pickled.isoformat() if dag.last_pickled else None,
+            'last_expired': dag.last_expired.isoformat() if dag.last_expired else None,
+            'scheduler_lock': dag.scheduler_lock,
+            'pickle_id': dag.pickle_id,
+            'root_dag_id': dag.root_dag_id,
+            'concurrency': dag.concurrency, # Deprecated in newer versions but still on model alias for max_active_tasks
+            'max_active_tasks': dag.max_active_tasks,
+            'max_active_runs': dag.max_active_runs,
+            'has_task_concurrency_limits': dag.has_task_concurrency_limits,
+            'has_import_errors': dag.has_import_errors,
         }
         upcoming_list.append(dag_info)
 
-    # 실행 예정 시간이 빠른 순서대로 정렬
-    upcoming_list.sort(key=lambda x: x['next_run_logical_date'] if x['next_run_logical_date'] else "9999-12-31")
+    # 실행 예정 시간이 빠른 순서대로 정렬 (Wall Clock Time 기준)
+    upcoming_list.sort(key=lambda x: x['next_run_create_after'] if x['next_run_create_after'] else "9999-12-31")
 
     # 결과 로깅
     logger.info(f"Found {len(upcoming_list)} scheduled DAGs.")
