@@ -2,6 +2,9 @@
 DAG: Upcoming Schedule Checker
 Author: jsangmin <jsm20up@gmail.com>
 Description: 
+    Retrieves the scheduled execution (Next Run) information of all active (Unpaused) DAGs.
+    Useful for checking the upcoming DAG list and their scheduled times to understand scheduling status.
+
     현재 활성화(Unpaused)된 모든 DAG의 예정된 실행 스케줄(Next Run) 정보를 조회합니다.
     앞으로 실행될 DAG 목록과 예정 시간을 확인하여 스케줄링 현황을 파악할 수 있습니다.
 """

@@ -7,6 +7,9 @@ Description:
     Calculates and prints the duration of each DAG run for a given DAG ID over the last 30 days.
     Also computes the average duration.
 
+    최근 30일 동안 특정 DAG ID에 대한 각 DAG 실행의 소요 시간을 계산하고 출력합니다.
+    또한 평균 소요 시간도 계산합니다.
+
 Usage:
     python dag_duration_stats.py <dag_id>
 """

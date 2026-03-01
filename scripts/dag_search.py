@@ -7,6 +7,9 @@ Description:
     This script searches for DAGs whose IDs match a given pattern (substring).
     It connects to the Airflow metadata database.
 
+    이 스크립트는 ID가 주어진 패턴(부분 문자열)과 일치하는 DAG를 검색합니다.
+    Airflow 메타데이터 데이터베이스에 연결하여 수행합니다.
+
 Usage:
     python dag_search.py <search_pattern>
     Example: python dag_search.py _CO_

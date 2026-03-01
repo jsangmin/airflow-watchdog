@@ -2,6 +2,13 @@
 DAG: Daily DAG History Collector
 Author: jsangmin <jsm20up@gmail.com>
 Description: 
+    A DAG designed to collect detailed history (execution time, state, retry count, log URL, etc.) 
+    of all DAGs and Tasks executed today, for logging or future analysis.
+    
+    Collected items:
+    - DAG Run: ID, state, start/end time, total duration
+    - Task Instance: ID, state, retry count, execution worker (Hostname), log URL
+
     오늘 실행된 모든 DAG와 Task의 상세 이력(실행 시간, 상태, Retry 횟수, 로그 URL 등)을 
     수집하여 로그로 출력하거나 추후 분석용으로 활용하기 위한 DAG입니다.
     

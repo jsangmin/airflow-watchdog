@@ -7,6 +7,9 @@ Description:
     Analyzes task failures over the last 30 days.
     Identifies the "Top N" tasks with the most failures to help pinpoint flaky or problematic tasks.
 
+    최근 30일 동안 발생한 태스크 실패를 분석합니다.
+    가장 많은 실패를 기록한 "Top N" 태스크를 식별하여 불안정하거나 문제가 있는 태스크를 파악하는 데 도움을 줍니다.
+
 Usage:
     python analyze_task_failures.py
 """

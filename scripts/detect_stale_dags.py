@@ -7,6 +7,9 @@ Description:
     Identifies "Stale" DAGs that have not been executed in the last 30 days.
     It distinguishes between Active (should run but doesn't) and Paused DAGs.
 
+    최근 30일 동안 실행되지 않은 "오래된(Stale)" DAG를 식별합니다.
+    활성 상태(실행되어야 하지만 실행되지 않음)와 일시 중지된 DAG를 구분합니다.
+
 Usage:
     python detect_stale_dags.py
 """

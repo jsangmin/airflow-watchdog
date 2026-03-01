@@ -2,6 +2,12 @@
 DAG: Airflow Ops Monitor
 Author: jsangmin <jsm20up@gmail.com>
 Description: 
+    A system DAG for monitoring Airflow operational stability.
+    Periodically checks the following items:
+    1. Import Errors: Detects DAGs that fail to load due to syntax errors, etc.
+    2. Stuck/Long Running Tasks: Detects tasks that are stuck or taking unusually long.
+    3. Failed DAGs: Detects recently failed DAG runs.
+
     Airflow 운영 안정성을 모니터링하기 위한 시스템 DAG입니다.
     주기적으로 다음 항목들을 점검합니다:
     1. Import Errors: 문법 오류 등으로 로드되지 않는 DAG 감지
