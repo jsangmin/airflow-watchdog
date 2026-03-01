@@ -20,41 +20,38 @@ import os
 import argparse
 
 from airflow.models import DagModel
-from airflow.utils.session import create_session
+from airflow.utils.session import provide_session
 
-def list_scheduled_dags(dag_pattern=None, owner_pattern=None):
+@provide_session
+def list_scheduled_dags(dag_pattern=None, owner_pattern=None, session=None):
     print(f"{'DAG ID':<50} | {'Owner':<20} | {'Schedule Interval (Cron)':<30}")
     print("-" * 106)
 
-    session = create_session()
-    try:
-        # Query for active and unpaused DAGs
-        query = session.query(DagModel).filter(
-            DagModel.is_active == True,
-            DagModel.is_paused == False
-        )
+    # Query for active and unpaused DAGs
+    query = session.query(DagModel).filter(
+        DagModel.is_active == True,
+        DagModel.is_paused == False
+    )
 
-        if dag_pattern:
-            query = query.filter(DagModel.dag_id.like(f"%{dag_pattern}%"))
-            
-        if owner_pattern:
-            query = query.filter(DagModel.owners.like(f"%{owner_pattern}%"))
+    if dag_pattern:
+        query = query.filter(DagModel.dag_id.like(f"%{dag_pattern}%"))
+        
+    if owner_pattern:
+        query = query.filter(DagModel.owners.like(f"%{owner_pattern}%"))
 
-        dags = query.all()
+    dags = query.all()
 
-        if not dags:
-            print("No active scheduled DAGs found matching the criteria.")
-            return
+    if not dags:
+        print("No active scheduled DAGs found matching the criteria.")
+        return
 
-        for dag in dags:
-            if not dag.schedule_interval:
-                continue
-            
-            schedule = str(dag.schedule_interval)
-            owner = str(dag.owners) if dag.owners else "N/A"
-            print(f"{dag.dag_id:<50} | {owner:<20} | {schedule:<30}")
-    finally:
-        session.close()
+    for dag in dags:
+        if not dag.schedule_interval:
+            continue
+        
+        schedule = str(dag.schedule_interval)
+        owner = str(dag.owners) if dag.owners else "N/A"
+        print(f"{dag.dag_id:<50} | {owner:<20} | {schedule:<30}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="List scheduled DAGs.")
