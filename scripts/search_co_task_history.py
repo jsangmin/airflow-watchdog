@@ -19,7 +19,7 @@ Usage:
 
 import sys
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 
 from airflow.models import DagModel, TaskInstance, DagRun
@@ -45,7 +45,15 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
         print(f"No DAGs found for owner matching '{owner_pattern}'.")
         return None
 
-    dag_ids = [dag.dag_id for dag in dags]
+    dag_ids = []
+    dag_owner_map = {}
+    for dag in dags:
+        dag_ids.append(dag.dag_id)
+        # Find owner string starting with 'P'
+        owners_list = [o.strip() for o in (dag.owners or "").split(",")]
+        p_owner = next((o for o in owners_list if o.startswith("P")), dag.dag_id)
+        dag_owner_map[dag.dag_id] = p_owner
+
     print(f"Found {len(dag_ids)} DAG(s) belonging to owner '{owner_pattern}'.")
 
     # 2. Query TaskInstances and their related DagRuns executed after last_search_date
@@ -70,12 +78,14 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
     seen_dag_runs = set()
 
     for ti, dag_run in query_result:
+        p_owner = dag_owner_map.get(dag_run.dag_id, dag_run.dag_id)
+        
         # Construct DagRun data once per unique run_id + dag_id
         dr_key = (dag_run.dag_id, dag_run.run_id)
         if dr_key not in seen_dag_runs:
             seen_dag_runs.add(dr_key)
             dag_run_rows.append({
-                "dag_id": dag_run.dag_id,
+                "p_owner": p_owner,
                 "run_id": dag_run.run_id,
                 "dag_run_state": dag_run.state,
                 "execution_date": dag_run.execution_date,
@@ -108,11 +118,11 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
 
         # Construct TaskInstance data
         task_rows.append({
-            "dag_id": ti.dag_id,
+            "p_owner": p_owner,
             "task_id": ti.task_id,
             "run_id": ti.run_id,
             "try_number": ti.try_number,
-            "operator": task.task_type if 'task' in locals() and hasattr(task, 'task_type') else "Unknown",
+            "operator": getattr(task, 'task_type', 'Unknown') if 'task' in locals() else "Unknown",
             "task_state": ti.state,
             "start_date": ti.start_date,
             "end_date": ti.end_date,
@@ -137,14 +147,19 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
     return df_dag_run, df_dag_task, next_search_date_str
 
 
-last_search_date = '2026-03-17 12:00:00'
-result = search_task_history(last_search_date_str=, owner_pattern=args.owner)
+now = datetime.now()
+target_time = now - timedelta(hours=9, minutes=15)
+last_search_date = target_time.strftime('%Y-%m-%d %H:%M:%S')
+
+result = search_task_history(last_search_date_str=last_search_date)
 
 if result:
     df_dag_run, df_dag_task, next_search_date = result
+    
+    print(f"\n[Used Search Date] {last_search_date}")
     
     print("\n=== df_dag_run Preview ===")
     print(df_dag_run.head())
     
     print("\n=== df_dag_task Preview ===")
-    print(df_dag_task[['dag_id', 'task_id', 'try_number', 'operator', 'task_state', 'duration_sec']].head())
+    print(df_dag_task[['p_owner', 'task_id', 'try_number', 'operator', 'task_state', 'duration_sec']].head())
