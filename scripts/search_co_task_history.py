@@ -56,18 +56,28 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
 
     print(f"Found {len(dag_ids)} DAG(s) belonging to owner '{owner_pattern}'.")
 
-    # 2. Query TaskInstances and their related DagRuns executed after last_search_date
-    query_result = session.query(TaskInstance, DagRun).join(
-        DagRun,
-        (TaskInstance.dag_id == DagRun.dag_id) & (TaskInstance.run_id == DagRun.run_id)
-    ).filter(
+    # 2. Query separate entities to avoid JOIN overhead
+    # First, query TaskInstances executed after last_search_date
+    tis = session.query(TaskInstance).filter(
         TaskInstance.dag_id.in_(dag_ids),
         TaskInstance.start_date >= last_search_date
     ).order_by(TaskInstance.start_date.desc()).all()
 
-    if not query_result:
+    if not tis:
         print(f"No task execution history found for owner '{owner_pattern}' since {last_search_date_str}.")
         return None
+
+    # We need the distinct (dag_id, run_id) combinations from the fetched TaskInstances
+    target_dag_run_keys = set((ti.dag_id, ti.run_id) for ti in tis)
+    
+    # Next, query DagRuns independently based on those keys
+    dag_runs = []
+    if target_dag_run_keys:
+        # Simplest way is querying by dag_id in chunks, but here we can just query relevant dag_ids
+        # and filter in memory if the tuple `in_` is not fully supported by dialect.
+        dag_runs_query = session.query(DagRun).filter(DagRun.dag_id.in_(dag_ids)).all()
+        # Filter down to only the DagRuns that correspond to our task instances
+        dag_runs = [dr for dr in dag_runs_query if (dr.dag_id, dr.run_id) in target_dag_run_keys]
 
     # 3. Load DagBag to extract task code context
     print("📦 Loading DagBag to fetch task code context...")
@@ -75,32 +85,26 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
 
     dag_run_rows = []
     task_rows = []
-    seen_dag_runs = set()
 
-    for ti, dag_run in query_result:
+    # Process DagRuns
+    for dag_run in dag_runs:
         p_owner = dag_owner_map.get(dag_run.dag_id, dag_run.dag_id)
-        
-        # Construct DagRun data once per unique run_id + dag_id
-        dr_key = (dag_run.dag_id, dag_run.run_id)
-        if dr_key not in seen_dag_runs:
-            seen_dag_runs.add(dr_key)
-            dag_run_rows.append({
-                "p_owner": p_owner,
-                "run_id": dag_run.run_id,
-                "dag_run_state": dag_run.state,
-                "execution_date": dag_run.execution_date,
-                "start_date": dag_run.start_date,
-                "end_date": dag_run.end_date,
-            })
+        dag_run_rows.append({
+            "p_owner": p_owner,
+            "run_id": dag_run.run_id,
+            "dag_run_state": dag_run.state,
+            "execution_date": dag_run.execution_date,
+            "start_date": dag_run.start_date,
+            "end_date": dag_run.end_date,
+        })
 
-        # Determine code context for TaskInstance
+    # Process TaskInstances
+    for ti in tis:
         code = "N/A"
         try:
             dag = dagbag.get_dag(ti.dag_id)
             if dag and dag.has_task(ti.task_id):
                 task = dag.get_task(ti.task_id)
-                
-                # Check known attributes that hold code/commands
                 if hasattr(task, 'bash_command'):
                     code = str(task.bash_command)
                 elif hasattr(task, 'sql'):
@@ -117,6 +121,7 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
             code = f"Error extracting code: {str(e)}"
 
         # Construct TaskInstance data
+        p_owner = dag_owner_map.get(ti.dag_id, ti.dag_id)
         task_rows.append({
             "p_owner": p_owner,
             "task_id": ti.task_id,
