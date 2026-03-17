@@ -18,6 +18,7 @@ Usage:
 """
 
 import sys
+import os
 import argparse
 from datetime import datetime, timedelta
 import pandas as pd
@@ -79,9 +80,14 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
         # Filter down to only the DagRuns that correspond to our task instances
         dag_runs = [dr for dr in dag_runs_query if (dr.dag_id, dr.run_id) in target_dag_run_keys]
 
-    # 3. Load DagBag to extract task code context
-    print("📦 Loading DagBag to fetch task code context...")
-    dagbag = DagBag()
+    # 3. Load DagBag ONLY for the specific DAG files we need (Major Performance Optimization)
+    unique_filelocs = {dag.fileloc for dag in dags if getattr(dag, 'fileloc', None)}
+    print(f"📦 Loading {len(unique_filelocs)} target DAG files to fetch task code context (Optimized)...")
+    
+    dagbag = DagBag(dag_folder=os.devnull, include_examples=False)
+    for fileloc in unique_filelocs:
+        if os.path.exists(fileloc):
+            dagbag.process_file(fileloc)
 
     dag_run_rows = []
     task_rows = []
@@ -106,26 +112,36 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
         })
 
     # Process TaskInstances
+    task_code_cache = {}
+
     for ti in tis:
-        code = "N/A"
-        try:
-            dag = dagbag.get_dag(ti.dag_id)
-            if dag and dag.has_task(ti.task_id):
-                task = dag.get_task(ti.task_id)
-                if hasattr(task, 'bash_command'):
-                    code = str(task.bash_command)
-                elif hasattr(task, 'sql'):
-                    code = str(task.sql)
-                elif hasattr(task, 'python_callable'):
-                    import inspect
-                    try:
-                        code = inspect.getsource(task.python_callable)
-                    except Exception:
-                        code = f"Function: {task.python_callable.__name__}"
-                else:
-                    code = f"[Operator: {task.task_type}] No explicitly supported code attribute."
-        except Exception as e:
-            code = f"Error extracting code: {str(e)}"
+        cache_key = (ti.dag_id, ti.task_id)
+        if cache_key in task_code_cache:
+            code, operator_name = task_code_cache[cache_key]
+        else:
+            code = "N/A"
+            operator_name = "Unknown"
+            try:
+                dag = dagbag.get_dag(ti.dag_id)
+                if dag and dag.has_task(ti.task_id):
+                    task = dag.get_task(ti.task_id)
+                    operator_name = getattr(task, 'task_type', 'Unknown')
+                    if hasattr(task, 'bash_command'):
+                        code = str(task.bash_command)
+                    elif hasattr(task, 'sql'):
+                        code = str(task.sql)
+                    elif hasattr(task, 'python_callable'):
+                        import inspect
+                        try:
+                            code = inspect.getsource(task.python_callable)
+                        except Exception:
+                            code = f"Function: {task.python_callable.__name__}"
+                    else:
+                        code = f"[Operator: {task.task_type}] No explicitly supported code attribute."
+            except Exception as e:
+                code = f"Error extracting code: {str(e)}"
+            
+            task_code_cache[cache_key] = (code, operator_name)
 
         # Construct TaskInstance data
         p_owner = dag_owner_map.get(ti.dag_id, ti.dag_id)
@@ -134,7 +150,7 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
             "task_id": ti.task_id,
             "run_id": ti.run_id,
             "try_number": ti.try_number,
-            "operator": getattr(task, 'task_type', 'Unknown') if 'task' in locals() else "Unknown",
+            "operator": operator_name,
             "task_state": ti.state,
             "start_date": ti.start_date,
             "end_date": ti.end_date,
