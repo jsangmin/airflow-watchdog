@@ -170,16 +170,16 @@ if result:
     
     print(f"\n[Used Search Date] {last_search_date}")
     
-    print("\n=== df_dag_run Preview (Top 10) ===")
+    print("\n=== df_dag_run Preview (Top 30) ===")
     try:
         from tabulate import tabulate
-        print(tabulate(df_dag_run[['p_owner', 'run_id', 'dag_run_state', 'start_date', 'end_date', 'duration_sec', 'conf']].head(10), headers='keys', tablefmt='psql', showindex=False))
+        print(tabulate(df_dag_run[['p_owner', 'run_id', 'dag_run_state', 'start_date', 'end_date', 'duration_sec', 'conf']].head(30), headers='keys', tablefmt='psql', showindex=False))
     except ImportError:
-        print(df_dag_run[['p_owner', 'run_id', 'dag_run_state', 'start_date', 'end_date', 'duration_sec', 'conf']].head(10))
+        print(df_dag_run[['p_owner', 'run_id', 'dag_run_state', 'start_date', 'end_date', 'duration_sec', 'conf']].head(30))
     
-    print("\n=== df_dag_task Preview (Top 10) ===")
+    print("\n=== df_dag_task Preview (Top 30) ===")
     try:
         from tabulate import tabulate
-        print(tabulate(df_dag_task[['p_owner', 'task_id', 'try_number', 'operator', 'task_state', 'start_date', 'end_date', 'duration_sec']].head(10), headers='keys', tablefmt='psql', showindex=False))
+        print(tabulate(df_dag_task[['p_owner', 'task_id', 'try_number', 'operator', 'task_state', 'start_date', 'end_date', 'duration_sec']].head(30), headers='keys', tablefmt='psql', showindex=False))
     except ImportError:
-        print(df_dag_task[['p_owner', 'task_id', 'try_number', 'operator', 'task_state', 'start_date', 'end_date', 'duration_sec']].head(10))
+        print(df_dag_task[['p_owner', 'task_id', 'try_number', 'operator', 'task_state', 'start_date', 'end_date', 'duration_sec']].head(30))
