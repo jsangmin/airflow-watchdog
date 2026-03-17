@@ -89,6 +89,11 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
     # Process DagRuns
     for dag_run in dag_runs:
         p_owner = dag_owner_map.get(dag_run.dag_id, dag_run.dag_id)
+        
+        # Handle conf (passed parameters)
+        # Usually it is a dict if parameters were triggered via API/CLI
+        conf_str = str(dag_run.conf) if dag_run.conf else "None"
+        
         dag_run_rows.append({
             "p_owner": p_owner,
             "run_id": dag_run.run_id,
@@ -96,6 +101,7 @@ def search_task_history(last_search_date_str, owner_pattern="CO", session=None):
             "execution_date": dag_run.execution_date,
             "start_date": dag_run.start_date,
             "end_date": dag_run.end_date,
+            "conf": conf_str,
         })
 
     # Process TaskInstances
@@ -164,7 +170,7 @@ if result:
     print(f"\n[Used Search Date] {last_search_date}")
     
     print("\n=== df_dag_run Preview ===")
-    print(df_dag_run.head())
+    print(df_dag_run[['p_owner', 'run_id', 'dag_run_state', 'conf']].head())
     
     print("\n=== df_dag_task Preview ===")
     print(df_dag_task[['p_owner', 'task_id', 'try_number', 'operator', 'task_state', 'duration_sec']].head())
