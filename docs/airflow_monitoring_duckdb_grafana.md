@@ -1,5 +1,7 @@
 # Airflow Task History Monitoring with Grafana, DuckDB, and S3
 
+![Expected Grafana Dashboard Mockup](./grafana_dashboard_mockup.png)
+
 이 문서는 `search_co_task_history.py` 스크립트로 추출한 Airflow Task History 데이터를 **Amazon S3**에 적재한 뒤, 이를 로컬 환경으로 내려받아 **DuckDB**와 **Grafana**를 연동하여 모니터링 대시보드를 구성하는 아키텍처 및 추천 대시보드 패널 상세안입니다.
 
 ## 1. 아키텍처 개요 (Architecture Overview)
